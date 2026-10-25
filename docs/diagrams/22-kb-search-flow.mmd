@@ -1,0 +1,11 @@
+flowchart TD
+  Q[GET /api/v1/articles with q] --> V{Caller is staff?}
+  V -->|no, CUSTOMER| F1[Force status PUBLISHED and visibility PUBLIC; request filters can only narrow]
+  V -->|yes| F2[Optional status, visibility, category filters]
+  F1 --> T[Tokenise: lower case, drop stop words, at most 8 tokens]
+  F2 --> T
+  T --> S[SQL: tenant and visibility scope, LIKE on any token over title, summary, body, newest first, at most 300 candidates]
+  S --> SC[JVM scoring: title 5, summary 3, body up to 5, whole-phrase bonus]
+  SC --> PG[Sort by score, slice the requested page]
+  PG --> R[PageResponse of articles]
+  Q2[No q: PUBLISHED and PUBLIC list] --> CA[Cache-aside per page, 60 s TTL, evicted after commit of any article write]

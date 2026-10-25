@@ -1,0 +1,12 @@
+flowchart LR
+  URL[URL query string: filters, sort, page] --> TF[lib/ticketFilters]
+  TF --> RQ[TanStack Query with keys t, tenantId, resource]
+  RQ --> API[api/client.ts: Authorization, X-Correlation-Id, ApiError mapping]
+  AC[AuthContext and tokenStore: memory plus sessionStorage] --> API
+  API --> GW[Gateway :8080]
+  RQ --> UI[Lazy route pages and UI kit]
+  FRM[React Hook Form and Zod] --> MUT[Mutations]
+  MUT --> API
+  MUT -->|invalidate key prefix| RQ
+  API -->|401: clear session| AC
+  AC -->|logout: clear whole cache| RQ

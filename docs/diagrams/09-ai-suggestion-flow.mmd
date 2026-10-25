@@ -1,0 +1,20 @@
+sequenceDiagram
+  participant AG as Agent UI
+  participant API as AI endpoint
+  participant SAN as Sanitizer and Redactor
+  participant PR as AiProvider (mock default)
+  participant DS as Suggestion store
+  participant T as Ticket comments
+  AG->>API: POST /tickets/id/ai/analyze
+  API->>SAN: strip and redact PII, bound length
+  SAN->>PR: sanitized ticket + KB candidates (timeout, bounded retry)
+  alt provider ok
+    PR-->>API: summary, category, priority, reply, confidence
+    API->>DS: save PENDING_REVIEW + audit
+    API-->>AG: suggestion (generated true)
+  else timeout or failure
+    API-->>AG: degraded true + fallback message
+  end
+  AG->>API: approve (optionally edited) or reject
+  API->>T: post reply as comment only on approve
+  API->>DS: record decision + audit + event

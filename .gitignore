@@ -1,0 +1,8 @@
+# Local environment files (real values must never be committed; env.example is the template)
+.env
+.env.*
+!env.example
+.run/
+target/
+node_modules/
+dist/

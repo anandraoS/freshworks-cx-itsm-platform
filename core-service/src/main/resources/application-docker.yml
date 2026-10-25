@@ -1,0 +1,42 @@
+# DOCKER profile: PostgreSQL + Redis + RabbitMQ + MongoDB. Every credential comes from the environment; there are NO defaults for
+# secrets (the app fails fast when they are missing). NOT executed in the authoring environment (no Docker available).
+spring:
+  datasource:
+    url: ${CX_DB_URL:jdbc:postgresql://postgres:5432/cx_core}
+    username: ${CX_DB_USER:cx_app}
+    password: ${CX_DB_PASSWORD}
+  flyway:
+    # portable migrations + PostgreSQL-only (partial/GIN indexes, RLS, audit trigger)
+    locations: classpath:db/migration,classpath:db/migration-pg
+  data:
+    redis:
+      host: ${CX_REDIS_HOST:redis}
+      port: ${CX_REDIS_PORT:6379}
+      password: ${CX_REDIS_PASSWORD:}
+      timeout: 500ms
+      connect-timeout: 500ms
+    mongodb:
+      # e.g. mongodb://USER:PASSWORD@mongo:27017/cx?authSource=admin  - supplied ONLY via the environment (no default: it carries credentials)
+      uri: ${CX_MONGO_URI}
+  rabbitmq:
+    host: ${CX_RABBIT_HOST:rabbitmq}
+    port: ${CX_RABBIT_PORT:5672}
+    username: ${CX_RABBIT_USER}
+    password: ${CX_RABBIT_PASSWORD}
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    template:
+      mandatory: true
+cx:
+  docstore: mongo   # KB version snapshots + AI metadata in MongoDB (authoritative data stays in PostgreSQL)
+  security:
+    jwt:
+      secret: ${CX_JWT_SECRET}
+  seed:
+    enabled: ${CX_SEED_ENABLED:true}
+  tenancy:
+    pg-rls: true
+  notifications:
+    # Docker: notifications are consumed from RabbitMQ by the separate notification-service container; never embed them here
+    # (the in-JVM listener path is the local runtime only).
+    embedded: false

@@ -1,0 +1,24 @@
+sequenceDiagram
+  participant C as Client
+  participant GW as Gateway
+  participant CMD as TicketCommandService
+  participant NA as TicketNumberAllocator
+  participant TS as TicketService
+  participant WF as WorkflowEngine
+  participant DB as Database
+  C->>GW: POST /api/v1/tickets with Idempotency-Key
+  GW->>CMD: forward after edge JWT check, core re-verifies
+  CMD->>DB: look up key for tenant, user, key
+  alt key already stored
+    CMD-->>C: replay stored 201, or 409 DUPLICATE_SUBMISSION if body differs
+  else new key
+    CMD->>NA: next number
+    NA->>DB: atomic UPDATE ticket_counter in its own short transaction
+    CMD->>TS: create inside one business transaction
+    TS->>DB: read cached SLA policy and tenant calendar
+    TS->>WF: apply active workflow rules
+    WF-->>TS: actions: set priority, add tag, assign least loaded
+    TS->>DB: insert ticket, attachments, activity, outbox ticket.created, audit
+    CMD->>DB: insert idempotency_key in the same transaction
+    CMD-->>C: 201 Created, SLA due dates set
+  end

@@ -1,0 +1,8 @@
+flowchart LR
+  A[T+0 alert fires: p95 or 5xx] --> B[T+5 acknowledge, name incident commander]
+  B --> C[T+10 assess severity, open channel]
+  C --> D[T+15 mitigate first: rollback, flag off, scale, fail over]
+  D --> E[T+45 confirm recovery on SLIs]
+  E --> F[T+60 status update, close incident]
+  F --> G[T+3 days blameless postmortem]
+  G --> H[T+14 days action items reviewed]

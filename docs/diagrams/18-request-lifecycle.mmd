@@ -1,0 +1,15 @@
+sequenceDiagram
+  participant B as Browser (TanStack Query)
+  participant GW as Gateway
+  participant F as Filters (corr id, JWT, tenant)
+  participant CT as Controller (validation)
+  participant SV as Service (Transactional)
+  participant DB as DB
+  B->>GW: GET /api/v1/tickets?status=OPEN
+  GW->>F: forward
+  F->>CT: TenantContext set
+  CT->>SV: DTO
+  SV->>DB: tenant-scoped paged query
+  DB-->>SV: rows
+  SV-->>CT: page DTO
+  CT-->>B: 200 JSON + X-Correlation-Id

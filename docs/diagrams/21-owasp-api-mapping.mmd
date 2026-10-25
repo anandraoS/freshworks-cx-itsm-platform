@@ -1,0 +1,17 @@
+flowchart LR
+  subgraph Strong[Implemented and tested]
+    A1[API1 BOLA: tenant-scoped finders, 404] 
+    A5[API5 BFLA: PreAuthorize + role matrix]
+    A3[API3 property level: DTO records]
+  end
+  subgraph Partial[Implemented with gaps]
+    A2[API2 Auth: no MFA, no refresh]
+    A4[API4 Resources: per-instance limits, no tenant quota]
+    A6[API6 Business flows: open registration]
+    A8[API8 Misconfig: seed on, Swagger open]
+    A9[API9 Inventory: Swagger public]
+  end
+  subgraph Trusting[Trust assumption]
+    A7[API7 SSRF: no outbound fetch of user URLs]
+    A10[API10 Unsafe consumption: broker is trusted]
+  end

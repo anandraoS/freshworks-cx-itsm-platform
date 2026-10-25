@@ -1,0 +1,6 @@
+flowchart LR
+  APP[Services: Micrometer metrics, key=value logs, correlation id] --> ACT[actuator/prometheus]
+  ACT --> PROM[Prometheus, scrape 15 s]
+  PROM --> GRAF[Grafana dashboard cx-platform-overview, provisioned]
+  PROM -.->|not configured in the repo| ALERT[Alert rules: p95, 5xx rate, queue depth, pool saturation]
+  APP --> LOGS[Console logs with corr, tenant, user fields]

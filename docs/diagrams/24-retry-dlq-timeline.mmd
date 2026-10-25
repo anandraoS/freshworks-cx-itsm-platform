@@ -1,0 +1,16 @@
+sequenceDiagram
+  participant Q as cx.notifications
+  participant C as Consumer
+  participant RQ as cx.notifications.retry (TTL 5 s)
+  participant DLQ as cx.notifications.dlq
+  Q->>C: deliver event E (attempt 1)
+  C->>C: process fails (retryable)
+  C->>RQ: publish copy, header x-attempt=1, wait for confirm
+  C->>Q: basicAck original (only after confirm)
+  Note over RQ: message sits for TTL, then dead-letters to default exchange with key cx.notifications
+  RQ->>Q: expired message re-enters queue
+  Q->>C: deliver E (attempt 2)
+  C->>C: fails again ... until attempt 5
+  C->>C: markDead(E) persisted in notif_processed_event
+  C->>DLQ: basicReject(requeue=false) routes via cx.events.dlx
+  Note over DLQ: Operator inspects, fixes cause, re-drives. Consumers stay idempotent on eventId.

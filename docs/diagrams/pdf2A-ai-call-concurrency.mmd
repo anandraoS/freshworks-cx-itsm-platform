@@ -1,0 +1,20 @@
+sequenceDiagram
+  participant T as Tomcat request thread
+  participant L as AiRateLimiter
+  participant B as AiCircuitBreaker
+  participant Q as ThreadPoolExecutor 4 workers, queue 16
+  participant W as ai-provider worker
+  participant P as AiProvider
+  T->>L: check(tenant)
+  L-->>T: ok or RateLimitedException 429
+  T->>B: allow()
+  B-->>T: false means degraded response
+  T->>Q: submit(analyze)
+  Q-->>T: RejectedExecutionException means overloaded
+  Q->>W: run
+  W->>P: analyze(sanitised request)
+  T->>T: future.get(timeout)
+  P-->>W: result
+  W-->>T: result or ExecutionException
+  T->>T: timeout then cancel(true), retry with backoff inside total deadline
+  T->>B: success() or failure()

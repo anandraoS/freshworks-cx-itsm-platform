@@ -1,0 +1,11 @@
+flowchart TB
+  R[Request + Bearer JWT] --> F[JWT filter: verify signature, expiry, revocation]
+  F -->|tid claim = tenant| TC[TenantContext thread-local]
+  TC --> AZ[Authorization: role + tenant membership]
+  AZ --> S[Service layer]
+  S --> HF[Hibernate tenant filter + explicit tenant_id predicates]
+  HF --> DB[(PostgreSQL shared schema, tenant_id on every row)]
+  DB -.->|docker profile| RLS[Row-level security policy app.tenant_id]
+  S --> CK[Cache keys t:tenantId:...]
+  S --> EV[Outbox events carry tenantId]
+  X[Client-supplied tenant id] -.->|ignored| TC

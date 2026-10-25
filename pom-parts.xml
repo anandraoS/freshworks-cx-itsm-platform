@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"><modelVersion>4.0.0</modelVersion>
+<groupId>tmp</groupId><artifactId>parts</artifactId><version>0</version><packaging>pom</packaging>
+<modules><module>platform-events</module><module>notification-service</module><module>gateway</module><module>dsa-lab</module></modules></project>

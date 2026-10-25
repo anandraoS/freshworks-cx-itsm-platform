@@ -1,0 +1,14 @@
+sequenceDiagram
+  participant A as Txn A (READ COMMITTED)
+  participant DB as PostgreSQL heap (row versions)
+  participant B as Txn B
+  A->>DB: BEGIN, SELECT status FROM ticket WHERE id=1
+  DB-->>A: OPEN (version v1, xmax empty)
+  B->>DB: BEGIN, UPDATE ticket SET status='RESOLVED' WHERE id=1
+  Note over DB: v1 gets xmax=B. New row version v2 (xmin=B) is written. Old version stays for readers.
+  A->>DB: SELECT status again
+  DB-->>A: OPEN (B not committed, v1 still visible)
+  B->>DB: COMMIT
+  A->>DB: SELECT status again
+  DB-->>A: RESOLVED under READ COMMITTED (new snapshot per statement)
+  Note over A,DB: Under REPEATABLE READ the third read would still return OPEN (one snapshot per transaction). VACUUM later removes v1 once no snapshot can see it.

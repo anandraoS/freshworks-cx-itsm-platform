@@ -1,0 +1,14 @@
+sequenceDiagram
+  participant U as Customer
+  participant API as Core API
+  participant WF as Workflow engine
+  participant DB as PostgreSQL
+  participant OB as Outbox
+  U->>API: POST /tickets (Idempotency-Key)
+  API->>DB: check idempotency key
+  API->>WF: evaluate active workflow rules
+  WF-->>API: actions (assign least-loaded agent, set priority)
+  API->>DB: insert ticket, activity, SLA deadlines, outbox row (one tx)
+  API-->>U: 201 Created
+  OB->>OB: relay publishes ticket.created and ticket.assigned
+  Note over API,DB: Scheduled SLA job later escalates at configured percent thresholds

@@ -1,0 +1,11 @@
+flowchart TB
+  T[Ticket text: UNTRUSTED customer input] --> S[AiSanitizer: NFKC, strip tags, drop instruction-like sentences, redact PII and secrets, bound length]
+  S --> P{{Trust boundary: AiProvider is a pure function, no DB, no tenant, no actions}}
+  P --> M[Mock rule-based provider - default, executed]
+  P -.-> H[HttpAiProvider stub - never called for real]
+  M --> V[Output validation: category in tenant list, priority enum, article ids from candidates, confidence clamped, tags and URLs stripped]
+  H -.-> V
+  V --> I[Inert PENDING_REVIEW suggestion + audit]
+  I --> G{Human approval gate: AGENT or above}
+  G -->|approve or edit| C[One PUBLIC aiGenerated comment]
+  G -->|reject| R[Nothing posted, reason recorded]

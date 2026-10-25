@@ -1,0 +1,15 @@
+flowchart LR
+  C[Customer] -->|submits and tracks tickets| WEB
+  A[Agent] -->|works tickets, reviews AI| WEB
+  M[Manager] -->|dashboards, SLA| WEB
+  AD[Administrator] -->|users, workflows, audit| WEB
+  WEB[React + TypeScript SPA] -->|REST + JWT| GW[API Gateway]
+  GW --> CORE[Core Service]
+  GW --> NOTIF[Notification Service]
+  CORE -->|events via outbox| MQ[(RabbitMQ)]
+  MQ --> NOTIF
+  CORE --> PG[(PostgreSQL)]
+  CORE --> RD[(Redis)]
+  CORE --> MG[(MongoDB)]
+  CORE -.->|optional, env-configured, never executed| AIX[External AI provider]
+  PROM[Prometheus and Grafana] -.->|scrapes actuator| CORE

@@ -1,0 +1,18 @@
+gantt
+  title Illustrative 12-month technical roadmap
+  dateFormat YYYY-MM-DD
+  axisFormat %b
+  section Prove what exists
+  Run docker ITs and Postgres RLS in CI   :a1, 2027-01-01, 30d
+  Enable percentile histograms and alerts :a2, 2027-01-15, 30d
+  section Production hardening
+  OIDC login plus refresh tokens          :b1, 2027-03-01, 60d
+  OpenTelemetry tracing                   :b2, 2027-03-15, 45d
+  Comment idempotency keys                :b3, 2027-04-15, 20d
+  section Scale
+  Extract notification-service deploy     :c1, 2027-05-15, 45d
+  Per-tenant quotas                       :c2, 2027-07-01, 45d
+  Load test on Postgres plus Redis        :c3, 2027-07-15, 30d
+  section Product
+  Real email delivery                     :d1, 2027-09-01, 45d
+  Real LLM provider pilot behind a flag   :d2, 2027-10-15, 60d

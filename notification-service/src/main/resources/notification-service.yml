@@ -1,0 +1,48 @@
+server:
+  port: 8082
+spring:
+  application:
+    name: notification-service
+  datasource:
+    # local profile (default): in-memory H2 in PostgreSQL mode. Dummy values only.
+    url: jdbc:h2:mem:notifdb;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ""
+  flyway:
+    enabled: false   # the module runs its own Flyway (db/notification-migration, notif_schema_history)
+cx:
+  security:
+    jwt:
+      secret: ${CX_JWT_SECRET:dev-only-NOT-A-REAL-SECRET-change-me-0123456789abcdef}
+  notifications:
+    embedded: false
+    channels: IN_APP,EMAIL
+    max-attempts: 5
+    retry-delay-ms: 5000
+    backoff-multiplier: 1.0
+    rabbit:
+      enabled: false
+      prefetch: 10
+      concurrency: 2
+      max-concurrency: 4
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  health:
+    rabbit:
+      enabled: false
+  metrics:
+    tags:
+      application: notification-service
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+logging:
+  level:
+    com.example.cx: ${CX_LOG_LEVEL:INFO}

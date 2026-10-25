@@ -1,0 +1,29 @@
+flowchart TB
+  subgraph Dm[Domain packages and the edges between them]
+    direction LR
+    seed --> auth
+    seed --> kb
+    auth --> tickets
+    auth --> sla
+    auth --> workflow
+    ai --> kb
+    ai --> tickets
+    ai --> analytics
+    kb --> tickets
+    kb --> docstore
+    ai --> docstore
+    tickets <--> sla
+    tickets <--> workflow
+    tickets <--> analytics
+  end
+  subgraph X[Cross-cutting packages used widely by the domain packages]
+    direction LR
+    tenancy
+    common
+    config
+    security
+    audit
+    cache
+    outbox
+  end
+  Dm -.->|depend on, as needed| X

@@ -1,0 +1,11 @@
+flowchart TD
+  Q["Query: tenant_id = T AND status = 'OPEN' ORDER BY created_at DESC LIMIT 20"] --> ROOT
+  ROOT["Root page: separator keys (tenant_id, status, created_at)"] --> I1["Internal page"]
+  ROOT --> I2["Internal page"]
+  I1 --> L1["Leaf: T,'NEW',..."]
+  I1 --> L2["Leaf: T,'OPEN',2026-01..."]
+  I1 --> L3["Leaf: T,'OPEN',2026-06..."]
+  L2 --- L3
+  L3 -->|"walk leaves backwards, stop after 20 entries"| H["Heap fetch of 20 rows"]
+  NOTE["Leading column tenant_id is equality, status is equality, created_at gives the order: no Sort node needed. If the index were (tenant_id, status, sla_checked_at) the 14k OPEN rows must be read and sorted."]
+  H -.-> NOTE

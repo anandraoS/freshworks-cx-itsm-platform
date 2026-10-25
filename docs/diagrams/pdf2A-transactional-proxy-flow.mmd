@@ -1,0 +1,20 @@
+sequenceDiagram
+  participant C as Controller
+  participant P as CGLIB proxy of TicketService
+  participant TM as TenantAwareJpaTransactionManager
+  participant S as Target TicketService
+  participant DB as Database
+  C->>P: transition(id, request)
+  P->>TM: getTransaction (REQUIRED)
+  TM->>DB: begin, enable tenantFilter, set_config app.tenant_id
+  TM-->>P: transaction status
+  P->>S: invoke real method
+  S->>S: this.helper() - direct call, NO proxy, NO new transaction
+  S->>DB: load, mutate, save
+  S-->>P: result or RuntimeException
+  alt RuntimeException or Error
+    P->>TM: rollback
+  else normal return
+    P->>TM: commit, then afterCommit hooks
+  end
+  P-->>C: result

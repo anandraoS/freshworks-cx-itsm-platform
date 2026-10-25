@@ -1,0 +1,7 @@
+flowchart LR
+  gateway --> core-service
+  gateway --> notification-service
+  core-service --> platform-events
+  notification-service --> platform-events
+  core-service -.->|local profile: embedded listener| notification-service
+  dsa-lab[dsa-lab: educational only]

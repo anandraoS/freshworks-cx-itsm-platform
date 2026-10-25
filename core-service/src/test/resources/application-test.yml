@@ -1,0 +1,26 @@
+# Test overrides (profiles "local,test"): isolated H2 per Spring context, no seeding, no background schedulers.
+spring:
+  datasource:
+    url: jdbc:h2:mem:cxtest-${random.uuid};MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1
+  jpa:
+    hibernate:
+      ddl-auto: validate   # fails the context if an entity mapping drifts from the Flyway schema
+    properties:
+      hibernate:
+        generate_statistics: true
+cx:
+  seed:
+    enabled: false
+  outbox:
+    relay-enabled: false
+    purge-enabled: false
+  sla:
+    job-enabled: false
+  security:
+    login-rate:
+      capacity: 1000
+      refill-per-minute: 1000
+logging:
+  level:
+    root: WARN
+    http.access: WARN

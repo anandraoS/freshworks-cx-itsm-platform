@@ -1,0 +1,10 @@
+flowchart TD
+  R[Read dashboard or categories] --> K[key t:tenantId:name]
+  K --> H{Cache hit?}
+  H -->|yes| RET[Return cached]
+  H -->|no| SF[Single-flight lock per key]
+  SF --> DBQ[Query database]
+  DBQ --> PUT[Put with TTL]
+  PUT --> RET
+  W[Write ticket] --> INV[Invalidate tenant keys after commit]
+  RD[(Redis down)] -.->|fail open to DB, count error| DBQ

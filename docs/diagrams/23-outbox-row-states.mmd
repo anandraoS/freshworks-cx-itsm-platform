@@ -1,0 +1,9 @@
+stateDiagram-v2
+  [*] --> PENDING: inserted in the business transaction
+  PENDING --> PROCESSING: claim by compare-and-set, 60 s lease, attempts + 1
+  PROCESSING --> SENT: publish succeeded
+  PROCESSING --> PENDING: publish failed, backoff 2 s doubling, cap 300 s
+  PROCESSING --> PROCESSING: lease expired, another relay re-claims
+  PROCESSING --> FAILED: 8 attempts used or unreadable payload
+  SENT --> [*]: purged after 7 days
+  FAILED --> [*]: kept for inspection, no replay endpoint

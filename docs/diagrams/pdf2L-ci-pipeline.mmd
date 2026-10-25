@@ -1,0 +1,12 @@
+flowchart LR
+  PR[Pull request] --> L[Lint + typecheck]
+  L --> U[Unit + MockMvc + architecture tests]
+  U --> D[Docker ITs: Testcontainers]
+  D --> B[Build jars + SPA bundle]
+  B --> E[Playwright e2e on local stack]
+  E --> I[Image build + vulnerability scan]
+  I --> R[Registry]
+  R --> S[Deploy staging: migrate, smoke]
+  S --> C[Canary 5 percent]
+  C --> P[Full rollout]
+  C -. SLO breach .-> RB[Automatic rollback]

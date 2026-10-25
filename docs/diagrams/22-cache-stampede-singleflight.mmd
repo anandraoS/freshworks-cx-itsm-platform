@@ -1,0 +1,19 @@
+sequenceDiagram
+  participant R1 as Request 1
+  participant R2 as Request 2 to 12
+  participant C as CacheService (per node)
+  participant X as Redis or Caffeine
+  participant DB as PostgreSQL
+  R1->>C: getOrLoad(tenant, "analytics:dashboard:30")
+  C->>X: GET t:tenant:analytics:dashboard:30
+  X-->>C: miss
+  C->>C: inflight.putIfAbsent(key, future) wins
+  R2->>C: getOrLoad(same key)
+  C->>X: GET (miss)
+  C->>C: putIfAbsent returns existing future, join() and wait
+  C->>DB: loader runs once (about 9 queries)
+  DB-->>C: result
+  C->>X: SET key value EX ttl plus or minus 10 percent
+  C-->>R1: value
+  C-->>R2: same value (no second load)
+  Note over C,X: Redis down: GET throws, breaker opens for 5 s, loader result returned, cx.cache.fallback increments

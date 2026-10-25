@@ -1,0 +1,13 @@
+flowchart TD
+  REQ[HTTP request] --> CID[CorrelationIdFilter - MDC, outermost]
+  CID --> CORS[CorsFilter]
+  CORS --> JWT[JwtAuthFilter - verify HS256, check revocation, bind TenantContext]
+  JWT --> UPA[UsernamePasswordAuthenticationFilter - disabled here]
+  UPA --> AUTHZ[AuthorizationFilter - authorizeHttpRequests rules]
+  AUTHZ -->|permitted| DS[DispatcherServlet]
+  AUTHZ -->|no authentication| E401[401 UNAUTHENTICATED via entry point]
+  AUTHZ -->|authenticated but not allowed| E403[403 FORBIDDEN via access denied handler]
+  DS --> MS[PreAuthorize method security with role hierarchy]
+  MS --> CTRL[Controller then Service]
+  CTRL --> ADV[RestControllerAdvice maps exceptions to the error schema]
+  JWT -. finally clear TenantContext and SecurityContext .-> REQ

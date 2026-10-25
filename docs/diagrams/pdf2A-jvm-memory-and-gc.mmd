@@ -1,0 +1,22 @@
+flowchart LR
+  subgraph JVM[JVM process of core-service]
+    subgraph HEAP[Heap - garbage collected]
+      EDEN[Young: Eden]
+      SURV[Young: Survivor S0/S1]
+      OLD[Old generation]
+      HUM[Humongous regions - large arrays]
+    end
+    subgraph NONHEAP[Outside the Java heap]
+      META[Metaspace - class metadata]
+      CODE[Code cache - JIT output]
+      STK[Thread stacks - one per platform thread]
+      DIRECT[Direct buffers / native memory]
+    end
+  end
+  NEW[new Object] --> EDEN
+  EDEN -->|young GC, live objects copied| SURV
+  SURV -->|age threshold reached| OLD
+  EDEN -.->|too large| HUM
+  OLD -->|concurrent mark then mixed collections| OLD
+  CL[ClassLoader load: AppClassLoader] --> META
+  JIT[C1 and C2 compilers] --> CODE

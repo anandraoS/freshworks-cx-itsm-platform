@@ -1,0 +1,8 @@
+stateDiagram-v2
+  [*] --> PENDING_REVIEW: analyze succeeded, nothing applied to the ticket
+  PENDING_REVIEW --> APPROVED: approve with the original reply
+  PENDING_REVIEW --> EDITED_APPROVED: approve with an edited reply
+  PENDING_REVIEW --> REJECTED: reject with a reason
+  APPROVED --> [*]: exactly one PUBLIC aiGenerated comment posted
+  EDITED_APPROVED --> [*]: exactly one PUBLIC aiGenerated comment posted
+  REJECTED --> [*]: nothing posted

@@ -1,0 +1,36 @@
+# Prometheus scrape config. Targets use docker-compose service names (docker profile).
+# For the local (non-docker) run replace targets with host.docker.internal:8081 / :8090 / :8082 (see infra/README.md).
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: core-service
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["core-service:8081"]
+        labels: {service: core-service}
+
+  - job_name: notification-service
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["notification-service:8082"]
+        labels: {service: notification-service}
+
+  # The gateway exposes actuator on an internal management port (8090), not on the public 8080.
+  - job_name: gateway
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["gateway:8090"]
+        labels: {service: gateway}
+
+  - job_name: rabbitmq
+    # requires: rabbitmq-plugins enable rabbitmq_prometheus (enabled by default in the 3.13 management image)
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["rabbitmq:15692"]
+        labels: {service: rabbitmq}
+
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]

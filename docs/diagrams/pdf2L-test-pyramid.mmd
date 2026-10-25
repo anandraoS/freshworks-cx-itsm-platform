@@ -1,0 +1,8 @@
+flowchart TB
+  E2E["Playwright e2e: 11 tests, 6 specs (not run)"]
+  CT["Docker ITs (Testcontainers): 7 tests (not run)"]
+  API["MockMvc API + integration tests: most of the 156 core tests (run)"]
+  UNIT["Unit tests: calculators, validators, limiters, state machine, DSA lab (run)"]
+  ARCH["Architecture rules + golden set: guard tests (run)"]
+  E2E --> CT --> API --> UNIT
+  ARCH -.-> API

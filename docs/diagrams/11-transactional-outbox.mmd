@@ -1,0 +1,14 @@
+sequenceDiagram
+  participant S as Service
+  participant DB as Database
+  participant R as OutboxRelay
+  participant P as EventPublisher
+  S->>DB: BEGIN, business rows plus outbox_event PENDING, COMMIT
+  loop every 1 s
+    R->>DB: find due ids (PENDING and due, or PROCESSING with expired lease), max 50
+    R->>DB: claim one row: compare-and-set UPDATE to PROCESSING with 60 s lease, attempts + 1
+    R->>P: publish outside any DB transaction
+    P-->>R: ok (local listeners, or broker confirm)
+    R->>DB: mark SENT
+  end
+  Note over R,P: failure: back to PENDING with backoff 2 s doubling to 5 min, FAILED after 8 attempts. Crash after publish gives duplicate delivery, so consumers dedupe by eventId

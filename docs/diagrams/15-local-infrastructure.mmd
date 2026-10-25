@@ -1,0 +1,22 @@
+flowchart TB
+  subgraph Compose[Docker Compose]
+    PG[(postgres 16)]
+    MG[(mongo 7)]
+    RD[(redis 7)]
+    MQ[(rabbitmq 3.13)]
+    PR[prometheus] --> GF[grafana]
+  end
+  subgraph Apps
+    FE[nginx + SPA] --> GW[gateway 8080]
+    GW --> CORE[core 8081]
+    GW --> NS[notification 8082]
+  end
+  CORE --> PG
+  CORE --> MG
+  CORE --> RD
+  CORE --> MQ
+  NS --> MQ
+  NS --> PG
+  PR -.->|scrape actuator/prometheus| CORE
+  PR -.-> NS
+  PR -.-> GW

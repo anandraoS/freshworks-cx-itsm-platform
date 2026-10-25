@@ -1,0 +1,13 @@
+stateDiagram-v2
+  [*] --> Fetching: first observer mounts, no cache entry
+  Fetching --> Fresh: success, data younger than staleTime
+  Fresh --> Stale: staleTime elapsed (15 s default here)
+  Stale --> Fetching: new observer mounts, invalidateQueries, refetchInterval
+  Fresh --> Fetching: invalidateQueries
+  Fetching --> Error: failure (retry once for 5xx/network, never for 4xx)
+  Error --> Fetching: retry or refetch
+  Fresh --> Inactive: last observer unmounts
+  Stale --> Inactive: last observer unmounts
+  Inactive --> Garbage: gcTime elapsed (5 min default)
+  Inactive --> Fresh: observer returns before gc
+  Garbage --> [*]

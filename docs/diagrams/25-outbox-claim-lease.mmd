@@ -1,0 +1,8 @@
+stateDiagram-v2
+  [*] --> PENDING: INSERT in the business transaction
+  PENDING --> PROCESSING: claim() CAS UPDATE, attempts+1, lease 60 s
+  PROCESSING --> SENT: publish ok (broker confirm)
+  PROCESSING --> PENDING: publish failed, backoff 2s * 2^(n-1), cap 300 s
+  PROCESSING --> PROCESSING: lease expired, another relay re-claims (crashed relay)
+  PROCESSING --> FAILED: attempts >= 8 or unreadable payload
+  SENT --> [*]: purged after 7 days

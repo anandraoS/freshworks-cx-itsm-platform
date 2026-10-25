@@ -1,0 +1,13 @@
+sequenceDiagram
+  participant B as Browser
+  participant GW as Gateway
+  participant C as Core
+  B->>GW: POST /auth/login (tenantSlug, email, password)
+  GW->>C: forward + X-Correlation-Id
+  C->>C: resolve tenant by slug, verify BCrypt
+  C-->>B: JWT (sub, tid, roles, jti)
+  B->>GW: request + Bearer JWT
+  GW->>GW: signature and expiry pre-check, rate limit
+  GW->>C: forward
+  C->>C: verify, revocation check, set TenantContext, authorize role
+  C-->>B: response (404 for other-tenant ids)

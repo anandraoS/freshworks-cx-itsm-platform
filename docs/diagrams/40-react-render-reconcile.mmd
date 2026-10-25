@@ -1,0 +1,7 @@
+flowchart LR
+  T[Trigger: setState, context change, query result] --> R[Render phase: call component functions, build new element tree]
+  R --> D[Reconcile: diff against previous fiber tree by type and key]
+  D --> C[Commit phase: apply minimal DOM mutations]
+  C --> L[Layout effects then paint]
+  L --> E[Passive effects: useEffect runs after paint]
+  E -->|setState inside effect| T

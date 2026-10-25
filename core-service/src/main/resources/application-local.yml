@@ -1,0 +1,36 @@
+# LOCAL profile: nothing external is needed.
+spring:
+  datasource:
+    url: jdbc:h2:mem:cxcore;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ""
+  autoconfigure:
+    # Redis / RabbitMQ client libraries are on the classpath for the docker profile; keep them inert locally.
+    exclude:
+      - org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+      # MongoDB client is only used by the docker profile (MongoDocumentStore); keep it inert locally
+      - org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.mongo.MongoDataAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.mongo.MongoRepositoriesAutoConfiguration
+management:
+  health:
+    rabbit:
+      enabled: false
+    redis:
+      enabled: false
+    mongo:
+      enabled: false
+cx:
+  seed:
+    enabled: true
+  security:
+    # generous for local demos / e2e runs (the default 10 burst / 5 per minute applies in the docker profile)
+    login-rate:
+      capacity: 100
+      refill-per-minute: 60
+  notifications:
+    # Local runtime has no RabbitMQ and no separate notification-service process: the notification module runs INSIDE core-service
+    # (library jar, auto-configured), receives outbox events through the in-JVM EventListener and serves /api/v1/notifications on 8081.
+    embedded: true

@@ -1,0 +1,10 @@
+flowchart LR
+  P["RabbitEventPublisher (routing key = event type)"] -->|"ticket.created"| EX{{"cx.events (topic, durable)"}}
+  P -->|"ticket.sla.breached"| EX
+  P -->|"ai.suggestion.decided"| EX
+  EX -->|"binding ticket.#"| Q["cx.notifications (durable)"]
+  EX -->|"binding ai.#"| Q
+  EX -.->|"no binding for e.g. kb.published: dropped or returned when mandatory=true"| X["(unroutable)"]
+  Q -->|"x-dead-letter-exchange"| DLX{{"cx.events.dlx (fanout)"}}
+  DLX --> DLQ["cx.notifications.dlq"]
+  Q --> C["SimpleMessageListenerContainer: manual ack, prefetch 10, 2 to 4 consumers"]

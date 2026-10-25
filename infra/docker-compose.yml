@@ -1,0 +1,221 @@
+# CX + ITSM platform: local infrastructure + optional application services.
+#
+# NOT EXECUTED in the authoring environment (Docker is not installed there); only YAML syntax was validated.
+#
+# Usage (from the repo root, after `cp env.example .env`):
+#   docker compose -f infra/docker-compose.yml --env-file .env up -d                 # infrastructure + observability only
+#   scripts/run-local.sh build                                                       # build the jars the app images copy
+#   docker compose -f infra/docker-compose.yml --env-file .env --profile apps up -d --build   # + core, notification, gateway, frontend
+#
+# Required variables use ${VAR:?message} so compose refuses to start with a missing secret (no hidden defaults).
+# Host ports are bound to 127.0.0.1 only: nothing is exposed to the network by default.
+
+name: cx-platform
+
+x-restart: &restart
+  restart: unless-stopped
+
+services:
+  postgres:
+    <<: *restart
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-cx}
+      POSTGRES_USER: ${POSTGRES_USER:-cx_app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?copy env.example to .env}
+    ports: ["127.0.0.1:${POSTGRES_PORT:-5432}:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  mongo:
+    <<: *restart
+    image: mongo:7
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME:?copy env.example to .env}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:?copy env.example to .env}
+    ports: ["127.0.0.1:${MONGO_PORT:-27017}:27017"]
+    volumes: [mongodata:/data/db]
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    <<: *restart
+    image: redis:7
+    command: ["sh", "-c", "exec redis-server --requirepass \"$$REDIS_PASSWORD\" --appendonly yes"]
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?copy env.example to .env}
+    ports: ["127.0.0.1:${REDIS_PORT:-6379}:6379"]
+    volumes: [redisdata:/data]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" --no-auth-warning ping | grep PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  rabbitmq:
+    <<: *restart
+    image: rabbitmq:3.13-management
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:?copy env.example to .env}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:?copy env.example to .env}
+    ports:
+      - "127.0.0.1:${RABBITMQ_PORT:-5672}:5672"
+      - "127.0.0.1:${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    volumes: [rabbitdata:/var/lib/rabbitmq]
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+
+  prometheus:
+    <<: *restart
+    image: prom/prometheus:v2.54.1
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=7d
+    ports: ["127.0.0.1:${PROMETHEUS_PORT:-9090}:9090"]
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - promdata:/prometheus
+    extra_hosts: ["host.docker.internal:host-gateway"]
+
+  grafana:
+    <<: *restart
+    image: grafana/grafana:11.2.2
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?copy env.example to .env}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    ports: ["127.0.0.1:${GRAFANA_PORT:-3000}:3000"]
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafanadata:/var/lib/grafana
+    depends_on: [prometheus]
+
+  # ------------------------------------------------------------------------------------
+  # Application services (profile "apps"). Build the jars first: scripts/run-local.sh build
+  # ------------------------------------------------------------------------------------
+  core-service:
+    <<: *restart
+    profiles: ["apps"]
+    build:
+      context: ..
+      dockerfile: infra/docker/core.Dockerfile
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SERVER_PORT: "8081"
+      CX_DB_URL: jdbc:postgresql://postgres:5432/cx_core
+      CX_DB_USER: ${POSTGRES_USER:-cx_app}
+      CX_DB_PASSWORD: ${POSTGRES_PASSWORD:?copy env.example to .env}
+      CX_REDIS_HOST: redis
+      CX_REDIS_PORT: "6379"
+      CX_REDIS_PASSWORD: ${REDIS_PASSWORD:?copy env.example to .env}
+      CX_RABBIT_HOST: rabbitmq
+      CX_RABBIT_PORT: "5672"
+      CX_RABBIT_USER: ${RABBITMQ_DEFAULT_USER:?copy env.example to .env}
+      CX_RABBIT_PASSWORD: ${RABBITMQ_DEFAULT_PASS:?copy env.example to .env}
+      CX_JWT_SECRET: ${CX_JWT_SECRET:?copy env.example to .env}
+      # MongoDB holds KB version snapshots + AI suggestion metadata (docs/kb-storage-notes.md); credentials come from .env.
+      # (URL-encode the password if you replace the dummy one with characters such as @ : / ?)
+      CX_MONGO_URI: mongodb://${MONGO_INITDB_ROOT_USERNAME:?copy env.example to .env}:${MONGO_INITDB_ROOT_PASSWORD:?copy env.example to .env}@mongo:27017/cx?authSource=admin
+      # AI_* are the names core-service reads first; CX_AI_* are accepted aliases (application.yml: AI_PROVIDER:${CX_AI_PROVIDER:mock}).
+      # Set either family in .env; both empty = deterministic mock provider, no outbound calls.
+      AI_PROVIDER: ${AI_PROVIDER:-${CX_AI_PROVIDER:-mock}}
+      AI_API_URL: ${AI_API_URL:-${CX_AI_API_BASE_URL:-}}
+      AI_API_KEY: ${AI_API_KEY:-${CX_AI_API_KEY:-}}
+      CX_LOG_LEVEL: ${CX_LOG_LEVEL:-INFO}
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      rabbitmq: {condition: service_healthy}
+      mongo: {condition: service_healthy}
+    ports: ["127.0.0.1:${CORE_PORT:-8081}:8081"]
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8081' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 40s
+
+  notification-service:
+    <<: *restart
+    profiles: ["apps"]
+    build:
+      context: ..
+      dockerfile: infra/docker/notification.Dockerfile
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SERVER_PORT: "8082"
+      # Same variable names as core-service (core application-docker.yml); no defaults for credentials.
+      CX_DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-cx_core}
+      CX_DB_USER: ${POSTGRES_USER:-cx_app}
+      CX_DB_PASSWORD: ${POSTGRES_PASSWORD:?copy env.example to .env}
+      CX_RABBIT_HOST: rabbitmq
+      CX_RABBIT_PORT: "5672"
+      CX_RABBIT_USER: ${RABBITMQ_DEFAULT_USER:?copy env.example to .env}
+      CX_RABBIT_PASSWORD: ${RABBITMQ_DEFAULT_PASS:?copy env.example to .env}
+      CX_JWT_SECRET: ${CX_JWT_SECRET:?copy env.example to .env}
+      CX_LOG_LEVEL: ${CX_LOG_LEVEL:-INFO}
+    depends_on:
+      postgres: {condition: service_healthy}
+      rabbitmq: {condition: service_healthy}
+    ports: ["127.0.0.1:${NOTIFICATION_PORT:-8082}:8082"]
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8082' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  gateway:
+    <<: *restart
+    profiles: ["apps"]
+    build:
+      context: ..
+      dockerfile: infra/docker/gateway.Dockerfile
+    environment:
+      SERVER_PORT: "8080"
+      CORE_URI: http://core-service:8081
+      NOTIFICATIONS_URI: http://notification-service:8082
+      GATEWAY_MANAGEMENT_PORT: ${GATEWAY_MANAGEMENT_PORT:-8090}
+      CX_JWT_SECRET: ${CX_JWT_SECRET:?copy env.example to .env}
+      CX_LOG_LEVEL: ${CX_LOG_LEVEL:-INFO}
+    depends_on:
+      core-service: {condition: service_healthy}
+      notification-service: {condition: service_healthy}
+    ports: ["127.0.0.1:${GATEWAY_PORT:-8080}:8080"]
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8090' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+
+  frontend:
+    <<: *restart
+    profiles: ["apps"]
+    build:
+      context: ..
+      dockerfile: infra/docker/frontend.Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8080}
+    depends_on: [gateway]
+    ports: ["127.0.0.1:${FRONTEND_PORT:-5173}:8080"]
+
+volumes:
+  pgdata:
+  mongodata:
+  redisdata:
+  rabbitdata:
+  promdata:
+  grafanadata:

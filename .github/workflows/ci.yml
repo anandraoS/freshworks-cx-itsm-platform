@@ -1,0 +1,70 @@
+# SAMPLE continuous-integration workflow. NOT EXECUTED: it was never pushed to GitHub, so no run exists. It documents the intended
+# pipeline described in PDF 2 Part L. Review action versions and pin them by commit SHA before relying on it.
+name: ci
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read            # least privilege: the pipeline only reads the repository
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '21', cache: maven }
+      # unit + MockMvc + architecture tests; docker-tagged tests are excluded by surefire's default excludedGroups
+      - run: mvn -B -ntp test
+      # Testcontainers tests (PostgreSQL RLS, RabbitMQ, Redis, MongoDB). ubuntu runners have Docker.
+      - run: mvn -B -ntp -Pdocker-tests -pl core-service,notification-service -am test
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: surefire-reports, path: '**/target/surefire-reports/' }
+
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults: { run: { working-directory: frontend } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20', cache: npm, cache-dependency-path: frontend/package-lock.json }
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  e2e:
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '21', cache: maven }
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - run: mvn -B -ntp -DskipTests -pl core-service,gateway -am package
+      - name: start backend (profile local, seeded, dummy CI-only secret)
+        run: |
+          export CX_JWT_SECRET="ci-only-throwaway-secret-0123456789-abcdefghij"
+          nohup java -jar core-service/target/core-service-1.0.0.jar --server.port=8081 > core.log 2>&1 &
+          nohup java -jar gateway/target/gateway-1.0.0.jar > gateway.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf localhost:8081/actuator/health && break; sleep 2; done
+      - run: npm ci && npx playwright install --with-deps chromium && npm test
+        working-directory: e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with: { name: playwright-traces, path: e2e/test-results/ }
+
+  # Image build + scan would follow on main only (docker build, vulnerability scan, push to a registry). Left out on purpose:
+  # the Dockerfiles in infra/docker/ were never built in the authoring environment.

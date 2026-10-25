@@ -1,0 +1,14 @@
+flowchart LR
+  subgraph L[local profile: executed on the authoring machine]
+    LC[core-service JVM] --> H2[(H2 in PostgreSQL mode)]
+    LC --> CA[Caffeine cache]
+    LC --> LE[LocalEventPublisher] --> EN[Embedded notification module, notif tables in the same H2]
+    LC --> JD[JpaDocumentStore: table document_store]
+    LC --> MK[MockRuleBasedAiProvider]
+  end
+  subgraph D[docker profile: never executed]
+    DC[core-service] --> PG[(PostgreSQL 16 plus RLS)]
+    DC --> RE[(Redis)]
+    DC --> RP[RabbitEventPublisher] --> MQ[(RabbitMQ)] --> NS[notification-service :8082] --> PG
+    DC --> MD[(MongoDB document store)]
+  end

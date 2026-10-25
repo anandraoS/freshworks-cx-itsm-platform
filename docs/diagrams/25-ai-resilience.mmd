@@ -1,0 +1,12 @@
+flowchart TD
+  A[POST /tickets/id/ai/analyze, AGENT or above] --> R{Tenant under 30 analyses per minute on this node?}
+  R -->|no| E429[429 RATE_LIMITED with Retry-After]
+  R -->|yes| S[Sanitise and redact title and description, build candidate lists]
+  S --> B{Circuit breaker allows a call?}
+  B -->|open| D1[HTTP 200 degraded true, reason circuit_open]
+  B -->|yes| P[Submit to bounded pool: 4 workers, 16 queued]
+  P -->|queue full| D2[HTTP 200 degraded true, reason overloaded]
+  P --> W{Result within 3 s per attempt and 10 s total?}
+  W -->|yes| OK[Validate output against candidates, store PENDING_REVIEW, 200 generated true]
+  W -->|no, retries left, max 2| P
+  W -->|no, exhausted| D3[HTTP 200 degraded true, audit AI_ANALYSIS_DEGRADED, breaker failure]

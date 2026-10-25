@@ -1,0 +1,8 @@
+flowchart TB
+  Q[List endpoint requirement] --> A{Need random access to page N and total count?}
+  A -->|yes, small or medium tenant| O[Offset: page,size,count query. Cost grows with page number]
+  A -->|no, infinite scroll or deep browsing| K[Keyset: WHERE created_at,id less than last seen. Cost stays flat]
+  O --> O1[Project today: ADR-019, size capped at 100, whitelisted sort + id tie-break]
+  K --> K1[Not implemented: needs opaque cursor and contract change]
+  O1 --> E1[H2 evidence: offset 40000 examined 50001 rows]
+  K1 --> E2[H2 evidence: keyset examined 10001 rows]

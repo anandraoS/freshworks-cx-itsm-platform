@@ -1,0 +1,16 @@
+flowchart TD
+  S[SlaMonitorJob every 60 s] --> T[For each tenant: bind TenantContext itself]
+  T --> L[Load up to 200 not-done tickets, least recently checked first]
+  L --> P{sla_paused_at set? status PENDING or ON_HOLD}
+  P -->|yes| PA[PAUSED: no breach, no escalation]
+  P -->|no| O{Now past resolution due, or past first-response due with no staff reply?}
+  O -->|yes| BR[BREACHED: flag once, event ticket.sla.breached]
+  O -->|no| U{Worst percent used >= 75?}
+  U -->|yes| AR[AT_RISK]
+  U -->|no| ON[ON_TRACK]
+  BR --> ES
+  AR --> ES
+  ON --> ES
+  ES[Escalation level = policy thresholds crossed by resolution percent, only ever increases; each increase writes activity and event ticket.escalated]
+  PA --> W
+  ES --> W[Bulk UPDATE sla_status, escalation_level, breach_notified, sla_checked_at: version untouched]

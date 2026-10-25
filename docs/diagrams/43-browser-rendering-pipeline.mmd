@@ -1,0 +1,10 @@
+flowchart LR
+  H[HTML bytes] --> P[Parse: DOM]
+  CSS[CSS bytes] --> CO[Parse: CSSOM]
+  P --> RT[Render tree]
+  CO --> RT
+  JS[JavaScript module] -.->|blocks or mutates| P
+  RT --> LA[Layout: geometry]
+  LA --> PA[Paint: draw records]
+  PA --> CP[Composite: GPU layers]
+  LA -.->|JS reads offsetHeight after writing styles: forced reflow| LA

@@ -1,0 +1,30 @@
+flowchart TB
+  subgraph Edge
+    GW[Gateway: routing, correlation id, rate limit, JWT pre-check]
+  end
+  subgraph Core[Core Service - modular, split-ready]
+    ID[identity + tenancy]
+    TK[tickets]
+    WF[workflow + SLA]
+    KB[knowledge base]
+    AI[AI assist]
+    AN[analytics]
+    OB[outbox relay]
+    AU[audit]
+  end
+  subgraph Async
+    NS[Notification Service]
+  end
+  GW --> ID
+  GW --> TK
+  GW --> WF
+  GW --> KB
+  GW --> AI
+  GW --> AN
+  TK --> OB
+  WF --> OB
+  AI --> OB
+  OB -->|cx.events| NS
+  ID --> AU
+  TK --> AU
+  WF --> AU

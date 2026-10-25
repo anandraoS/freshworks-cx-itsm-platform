@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent><groupId>com.example.cx</groupId><artifactId>cx-itsm-platform</artifactId><version>1.0.0</version></parent>
+  <artifactId>notification-service</artifactId>
+  <name>Notification service (standalone app + embeddable library)</name>
+  <properties>
+    <testcontainers.version>1.20.3</testcontainers.version>
+  </properties>
+  <dependencyManagement>
+    <dependencies>
+      <dependency><groupId>org.testcontainers</groupId><artifactId>testcontainers-bom</artifactId><version>${testcontainers.version}</version><type>pom</type><scope>import</scope></dependency>
+    </dependencies>
+  </dependencyManagement>
+  <dependencies>
+    <dependency><groupId>com.example.cx</groupId><artifactId>platform-events</artifactId><version>${project.version}</version></dependency>
+    <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-web</artifactId></dependency>
+    <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-jdbc</artifactId></dependency>
+    <dependency><groupId>org.flywaydb</groupId><artifactId>flyway-core</artifactId></dependency>
+    <dependency><groupId>io.micrometer</groupId><artifactId>micrometer-core</artifactId></dependency>
+    <dependency><groupId>io.jsonwebtoken</groupId><artifactId>jjwt-api</artifactId><version>${jjwt.version}</version></dependency>
+    <dependency><groupId>io.jsonwebtoken</groupId><artifactId>jjwt-impl</artifactId><version>${jjwt.version}</version><scope>runtime</scope></dependency>
+    <dependency><groupId>io.jsonwebtoken</groupId><artifactId>jjwt-jackson</artifactId><version>${jjwt.version}</version><scope>runtime</scope></dependency>
+
+    <!-- Optional: present in the standalone app, NOT forced onto core-service when embedded -->
+    <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-amqp</artifactId><optional>true</optional></dependency>
+    <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-actuator</artifactId><optional>true</optional></dependency>
+    <dependency><groupId>io.micrometer</groupId><artifactId>micrometer-registry-prometheus</artifactId><optional>true</optional></dependency>
+    <dependency><groupId>org.springdoc</groupId><artifactId>springdoc-openapi-starter-webmvc-ui</artifactId><version>${springdoc.version}</version><optional>true</optional></dependency>
+    <dependency><groupId>com.h2database</groupId><artifactId>h2</artifactId><optional>true</optional></dependency>
+    <dependency><groupId>org.postgresql</groupId><artifactId>postgresql</artifactId><optional>true</optional></dependency>
+    <dependency><groupId>org.flywaydb</groupId><artifactId>flyway-database-postgresql</artifactId><optional>true</optional></dependency>
+
+    <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-test</artifactId><scope>test</scope></dependency>
+    <dependency><groupId>org.testcontainers</groupId><artifactId>rabbitmq</artifactId><scope>test</scope></dependency>
+    <dependency><groupId>org.testcontainers</groupId><artifactId>junit-jupiter</artifactId><scope>test</scope></dependency>
+  </dependencies>
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId><artifactId>maven-surefire-plugin</artifactId>
+        <configuration><excludedGroups>docker</excludedGroups>
+          <!-- standalone config lives in notification-service*.yml (not application*.yml, so the library jar cannot shadow a host app config) -->
+          <systemPropertyVariables><spring.config.name>notification-service</spring.config.name></systemPropertyVariables></configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.springframework.boot</groupId><artifactId>spring-boot-maven-plugin</artifactId>
+        <configuration><mainClass>com.example.cx.notification.NotificationServiceApplication</mainClass>
+          <classifier>exec</classifier></configuration>
+        <executions><execution><goals><goal>repackage</goal></goals></execution></executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

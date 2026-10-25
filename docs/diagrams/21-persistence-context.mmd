@@ -1,0 +1,9 @@
+stateDiagram-v2
+  [*] --> Transient: new Ticket()
+  Transient --> Managed: persist() / save() of new entity
+  Managed --> Managed: setters change fields (dirty checking at flush)
+  Managed --> Detached: transaction ends, session closed
+  Detached --> Managed: merge() returns a managed copy
+  Managed --> Removed: remove()
+  Removed --> [*]: flush issues DELETE
+  Managed --> [*]: flush issues INSERT or UPDATE ... WHERE id=? AND version=?

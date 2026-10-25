@@ -1,0 +1,19 @@
+flowchart LR
+  subgraph A[Shared schema + tenant_id - CHOSEN]
+    A1[One database] --> A2[One schema] --> A3[(ticket rows: tenant_id on every row)]
+  end
+  subgraph B[Schema per tenant - not built]
+    B1[One database] --> B2[Schema acme] --> B3[(tables)]
+    B1 --> B4[Schema globex] --> B5[(tables)]
+  end
+  subgraph C[Database per tenant - not built]
+    C1[(DB acme)]
+    C2[(DB globex)]
+  end
+  subgraph D[Hybrid - natural evolution, not built]
+    D1[(Shared DB for small tenants)]
+    D2[(Dedicated DB for a large tenant)]
+    D3[Tenant directory routes by tenant id]
+    D3 --> D1
+    D3 --> D2
+  end

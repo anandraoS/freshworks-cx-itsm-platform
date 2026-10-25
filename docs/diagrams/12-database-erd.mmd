@@ -1,0 +1,78 @@
+erDiagram
+  ORGANIZATION ||--o{ APP_USER : employs
+  ORGANIZATION ||--o{ TICKET_CATEGORY : defines
+  ORGANIZATION ||--|| TICKET_COUNTER : numbers
+  ORGANIZATION ||--o{ TICKET : owns
+  ORGANIZATION ||--o{ SLA_POLICY : sets
+  ORGANIZATION ||--o{ WORKFLOW : versions
+  ORGANIZATION ||--o{ AUDIT_EVENT : records
+  ORGANIZATION ||--o{ OUTBOX_EVENT : emits
+  ORGANIZATION ||--o{ IDEMPOTENCY_KEY : remembers
+  APP_USER ||--o{ TICKET : requests
+  APP_USER |o--o{ TICKET : assigned_to
+  TICKET_CATEGORY |o--o{ TICKET : classifies
+  TICKET ||--o{ TICKET_COMMENT : has
+  TICKET ||--o{ TICKET_ACTIVITY : logs
+  TICKET ||--o{ TICKET_ATTACHMENT : has
+  APP_USER ||--o{ TICKET_COMMENT : writes
+  ORGANIZATION {
+    uuid id PK
+    varchar slug UK
+    varchar timezone
+    varchar business_hours_start
+    varchar business_days
+  }
+  APP_USER {
+    uuid id PK
+    uuid tenant_id FK
+    varchar email
+    varchar roles
+    boolean active
+  }
+  TICKET {
+    uuid id PK
+    uuid tenant_id FK
+    bigint number
+    varchar status
+    varchar priority
+    uuid requester_id FK
+    uuid assignee_id FK
+    timestamptz resolution_due_at
+    varchar sla_status
+    int escalation_level
+    bigint version
+  }
+  TICKET_COMMENT {
+    uuid id PK
+    uuid tenant_id FK
+    uuid ticket_id FK
+    varchar visibility
+    boolean ai_generated
+  }
+  SLA_POLICY {
+    uuid id PK
+    varchar priority
+    int first_response_minutes
+    int resolution_minutes
+    varchar escalation_after_percent
+  }
+  WORKFLOW {
+    uuid id PK
+    int version
+    boolean active
+    varchar definition
+  }
+  OUTBOX_EVENT {
+    uuid id PK
+    varchar event_type
+    varchar status
+    int attempts
+    timestamptz next_attempt_at
+    timestamptz locked_until
+  }
+  IDEMPOTENCY_KEY {
+    uuid id PK
+    uuid user_id
+    varchar idem_key
+    varchar request_hash
+  }

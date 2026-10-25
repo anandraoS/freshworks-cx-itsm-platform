@@ -1,0 +1,9 @@
+flowchart LR
+  OB[Outbox relay] -->|persistent + publisher confirm, routing key = event type| EX{{cx.events topic exchange}}
+  EX -->|ticket.# and ai.#| Q[cx.notifications]
+  Q --> C[Notification consumer: manual ack, idempotent on eventId]
+  C -->|transient failure: republish with x-attempt, wait for confirm, ack original| RQ[cx.notifications.retry TTL queue]
+  RQ -->|TTL expires, dead-letter via default exchange| Q
+  C -->|attempts exhausted or poison: persist DEAD, reject without requeue| DLX{{cx.events.dlx fanout}}
+  Q -.->|x-dead-letter-exchange| DLX
+  DLX --> DLQ[cx.notifications.dlq]

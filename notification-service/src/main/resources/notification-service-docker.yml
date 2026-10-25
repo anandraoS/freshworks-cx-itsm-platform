@@ -1,0 +1,26 @@
+# DOCKER profile of the STANDALONE notification-service (file name per spring.config.name=notification-service, set in
+# NotificationServiceApplication.main). Variable names match core-service's application-docker.yml and infra/docker-compose.yml.
+# Every credential comes from the environment and there are NO fallback values: startup fails fast when one is missing.
+# NOT executed in the authoring environment (no Docker available).
+spring:
+  datasource:
+    url: ${CX_DB_URL}
+    username: ${CX_DB_USER}
+    password: ${CX_DB_PASSWORD}
+  rabbitmq:
+    host: ${CX_RABBIT_HOST}
+    port: ${CX_RABBIT_PORT:5672}
+    username: ${CX_RABBIT_USER}
+    password: ${CX_RABBIT_PASSWORD}
+    publisher-confirm-type: correlated
+cx:
+  security:
+    jwt:
+      secret: ${CX_JWT_SECRET}
+  notifications:
+    rabbit:
+      enabled: true
+management:
+  health:
+    rabbit:
+      enabled: true

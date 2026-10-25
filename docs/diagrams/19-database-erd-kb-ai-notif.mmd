@@ -1,0 +1,60 @@
+erDiagram
+  ORGANIZATION ||--o{ KB_CATEGORY : owns
+  ORGANIZATION ||--o{ KB_ARTICLE : owns
+  ORGANIZATION ||--o{ DOCUMENT_STORE : scopes
+  KB_CATEGORY |o--o{ KB_ARTICLE : classifies
+  APP_USER ||--o{ KB_ARTICLE : authors
+  KB_ARTICLE ||--o{ KB_ARTICLE_TICKET : linked_by
+  TICKET ||--o{ KB_ARTICLE_TICKET : linked_by
+  TICKET ||--o{ AI_SUGGESTION : receives
+  APP_USER ||--o{ AI_SUGGESTION : requests
+  NOTIF_NOTIFICATION ||--o{ NOTIF_DELIVERY : delivered_by
+  KB_ARTICLE {
+    uuid id PK
+    uuid tenant_id FK
+    varchar slug
+    varchar visibility
+    varchar status
+    bigint version
+  }
+  KB_ARTICLE_TICKET {
+    uuid id PK
+    uuid article_id FK
+    uuid ticket_id FK
+  }
+  AI_SUGGESTION {
+    uuid id PK
+    uuid ticket_id FK
+    varchar status
+    varchar provider
+    double confidence
+    varchar suggested_reply
+    uuid decided_by
+    uuid posted_comment_id
+  }
+  DOCUMENT_STORE {
+    uuid tenant_id PK
+    varchar collection PK
+    varchar doc_key PK
+    varchar doc_json
+  }
+  NOTIF_PROCESSED_EVENT {
+    uuid event_id PK
+    uuid tenant_id
+    varchar status
+    int attempts
+  }
+  NOTIF_NOTIFICATION {
+    uuid id PK
+    uuid tenant_id
+    uuid user_id
+    uuid event_id
+    boolean is_read
+  }
+  NOTIF_DELIVERY {
+    uuid id PK
+    uuid event_id
+    varchar channel
+    varchar status
+    int attempts
+  }

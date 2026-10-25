@@ -1,0 +1,12 @@
+flowchart TD
+  A[Scan and register bean definitions] --> B[BeanFactoryPostProcessors, ConfigurationClassPostProcessor, property binding]
+  B --> C[Instantiate bean: constructor injection]
+  C --> D[Populate: field and setter injection]
+  D --> E[Aware callbacks: BeanNameAware, BeanFactoryAware]
+  E --> F[BeanPostProcessor before-init]
+  F --> G[PostConstruct then afterPropertiesSet then init-method]
+  G --> H[BeanPostProcessor after-init: AOP proxy created here]
+  H --> I[Singleton ready in the container]
+  I --> J[SmartInitializingSingleton, ContextRefreshedEvent, ApplicationRunner]
+  J --> K[Application serves traffic]
+  K --> L[Context close: PreDestroy then DisposableBean.destroy]
